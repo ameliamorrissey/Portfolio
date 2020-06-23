@@ -1,0 +1,444 @@
+---
+title: "Pursuit Study: Long Term Influence of Hypertension Medication on Health Benefits"
+author: "Amelia Johnson, Brian Kundinger, Emily Friedman"
+output: pdf_document
+---
+
+import data
+```{r}
+library(readxl)
+library(survival)
+library(ggplot2)
+PURSUIT <- read_excel("PURSUIT.xls")
+```
+
+reformat variables
+```{r}
+PURSUIT$DEATH180 <- as.numeric(PURSUIT$DEATH180)
+PURSUIT$DTHMI180 <- as.numeric(PURSUIT$DTHMI180)
+PURSUIT$DTHMI30 <- as.numeric(PURSUIT$DTHMI30)
+PURSUIT$HXPTCA <- as.numeric(PURSUIT$HXPTCA)
+PURSUIT$ENROLLMI <- as.numeric(PURSUIT$ENROLLMI)
+PURSUIT$STDEP <- as.numeric(PURSUIT$STDEP)
+PURSUIT$USPT <- as.numeric(PURSUIT$USPT)
+PURSUIT$INTERV72 <- as.numeric(PURSUIT$INTERV72)
+PURSUIT$CBLKPRH <- as.numeric(PURSUIT$CBLKPRH)
+PURSUIT$DIGPRH <- as.numeric(PURSUIT$DIGPRH)
+PURSUIT$NTRIVPR <- as.numeric(PURSUIT$NTRIVPR)
+PURSUIT$BBLKPR <- as.numeric(PURSUIT$BBLKPR)
+PURSUIT$HTN <- as.numeric(PURSUIT$HTN)
+PURSUIT$HXDIAB <- as.numeric(PURSUIT$HXDIAB)
+PURSUIT$LIPIDS <- as.numeric(PURSUIT$LIPIDS)
+PURSUIT$FAMHX <- as.numeric(PURSUIT$FAMHX)
+PURSUIT$PREVMI <- as.numeric(PURSUIT$PREVMI)
+PURSUIT$HXCHF <- as.numeric(PURSUIT$HXCHF)
+PURSUIT$HXCABG <- as.numeric(PURSUIT$HXCABG)
+PURSUIT$HXRINSUF <- as.numeric(PURSUIT$HXRINSUF)
+PURSUIT$PVD <- as.numeric(PURSUIT$PVD)
+PURSUIT$RACE <- as.factor(PURSUIT$RACE)
+PURSUIT$SMOKSTAT <- as.factor(PURSUIT$SMOKSTAT)
+PURSUIT$RALES <- as.factor(PURSUIT$RALES)
+PURSUIT$MALE <- as.numeric(PURSUIT$MALE)
+PURSUIT$PULSEB <- as.numeric(PURSUIT$PULSEB)
+PURSUIT$SOURCE <- as.factor(PURSUIT$SOURCE)
+PURSUIT$TX <- gsub("High", replacement=1, PURSUIT$TX)
+PURSUIT$TX <- gsub("Placebo", replacement=0, PURSUIT$TX)
+PURSUIT$TX <- as.numeric(PURSUIT$TX)
+PURSUIT$PULSEB <- as.numeric(PURSUIT$PULSEB)
+PURSUIT$DTHMIDAY <- as.numeric(PURSUIT$DTHMIDAY)
+PURSUIT$HEIGHT <- as.numeric(PURSUIT$HEIGHT)
+PURSUIT$BMI <- as.numeric(PURSUIT$BMI)
+PURSUIT$CREATCL <- as.numeric(PURSUIT$CREATCL)
+PURSUIT$MAXCKRAT <- as.numeric(PURSUIT$MAXCKRAT)
+PURSUIT$MAXMBRAT <- as.numeric(PURSUIT$MAXMBRAT)
+PURSUIT$BASCKRAT <- as.numeric(PURSUIT$BASCKRAT)
+PURSUIT$BASMBRAT <- as.numeric(PURSUIT$BASMBRAT)
+PURSUIT$SXTOTX <- as.numeric(PURSUIT$SXTOTX)
+```
+
+```{r}
+ggplot(data= PURSUIT, aes(x=TX, fill=DTHMI30)) +
+         geom_bar()
+```
+
+
+QUESTION 1: What baseline characteristics are associated with time from symptoms to 
+  treatment in the population of ACS patients studied in PURSUIT?
+  
+Plan: linear model selection and univariate and multiple analysis for each variable
+
+QUESTION 2: PURSUIT was an international trial, so it is natural to wonder
+  whether time from symptoms to treatment is different in different
+  in different regions of the world.  In particular, is the time between
+  symptoms and treatment in the US different from that for patients in 
+  the rest of the world?
+
+Plan: ANOVA, confidence interval graph
+
+QUESTION 3: Controlling for other relevant baseline factors, are the frequencies
+  of 30-day and 180-day outcomes (death/MI) associated with time from
+  symptoms to treatment?
+
+Plan:
+a) Attempt: logistic regression on DTHMI30 and DTHMI 180
+  Results: TX is significant for 30 day but not 180
+          SXTOTX is initially significant but in the opposite direction than hypothesized
+          it is not significant for either 30 or 180 when controlling for the patient's conditions
+
+make baseline sub dfs          
+```{r}
+baselinePursuit30wTX <- select(PURSUIT, DTHMI30, HXPTCA, ENROLLMI, STDEP, USPT, CBLKPRH, DIGPRH,NTRIVPR,BBLKPR,HTN,HXDIAB,LIPIDS,FAMHX,PREVMI,HXCHF,HXCABG,HXRINSUF,PVD,HXPAIN,RACE,SMOKSTAT,PULSEB,AGE,WEIGHT,HEIGHT,SYSBP,DIABP,BMI,CREATCL, RALES, MALE,SOURCE,BASCKRAT,BASMBRAT, TX, SXTOTX)
+
+baselinePursuit30wo <- select(PURSUIT, DTHMI30, HXPTCA, ENROLLMI, STDEP, USPT, CBLKPRH, DIGPRH,NTRIVPR,BBLKPR,HTN,HXDIAB,LIPIDS,FAMHX,PREVMI,HXCHF,HXCABG,HXRINSUF,PVD,HXPAIN,RACE,SMOKSTAT,PULSEB,AGE,WEIGHT,HEIGHT,SYSBP,DIABP,BMI,CREATCL, RALES, MALE,SOURCE,BASCKRAT,BASMBRAT,SXTOTX)
+
+baselinePursuit180wTX <- select(PURSUIT, DTHMI180, HXPTCA, ENROLLMI, STDEP, USPT, CBLKPRH, DIGPRH,NTRIVPR,BBLKPR,HTN,HXDIAB,LIPIDS,FAMHX,PREVMI,HXCHF,HXCABG,HXRINSUF,PVD,HXPAIN,RACE,SMOKSTAT,PULSEB,AGE,WEIGHT,HEIGHT,SYSBP,DIABP,BMI,CREATCL, RALES, MALE,SOURCE,BASCKRAT,BASMBRAT, TX, SXTOTX)
+
+baselinePursuit180wo <- select(PURSUIT, DTHMI180, HXPTCA, ENROLLMI, STDEP, USPT, CBLKPRH, DIGPRH,NTRIVPR,BBLKPR,HTN,HXDIAB,LIPIDS,FAMHX,PREVMI,HXCHF,HXCABG,HXRINSUF,PVD,HXPAIN,RACE,SMOKSTAT,PULSEB,AGE,WEIGHT,HEIGHT,SYSBP,DIABP,BMI,CREATCL, RALES, MALE,SOURCE,BASCKRAT,BASMBRAT, SXTOTX)
+```
+
+logistic regression for 30 days: TX significance with controls, SXTOTX is not
+```{r}
+summary(glm(data=PURSUIT, DTHMI30 ~ SXTOTX, family = binomial(link=logit)))
+
+summary(glm(data=PURSUIT, DTHMI30 ~ TX, family = binomial(link=logit)))
+
+summary(glm(data=PURSUIT, DTHMI30 ~ SXTOTX+TX, family = binomial(link=logit)))
+
+summary(glm(data=baselinePursuit30wTX, DTHMI30 ~ SXTOTX*TX, family = binomial(link=logit)))
+
+#without treatment 
+summary(glm(data=baselinePursuit30wo, DTHMI30 ~ ., family = binomial(link=logit)))
+
+#including treatment
+summary(glm(data=baselinePursuit30wTX, DTHMI30 ~ ., family = binomial(link=logit)))
+
+#summary(glm(data=baselinePursuit30, DTHMI30 ~ .+TX*SXTOTX, family = binomial(link=logit)))
+```
+
+logistic regression for 180 days: TX almost significant for death mi 180
+```{r}
+summary(glm(data=PURSUIT, DTHMI180 ~ SXTOTX, family = binomial(link=logit)))
+
+summary(glm(data=PURSUIT, DTHMI180 ~ TX, family = binomial(link=logit)))
+
+summary(glm(data=PURSUIT, DTHMI180 ~ SXTOTX+TX, family = binomial(link=logit)))
+
+summary(data=PURSUIT, DTHMI180 ~ SXTOTX*TX, family = binomial(link=logit))
+
+#without treatment 
+summary(glm(data=baselinePursuit180wo, DTHMI180 ~ ., family = binomial(link=logit)))
+
+#including treatment
+summary(glm(data=baselinePursuit180wTX, DTHMI180 ~ ., family = binomial(link=logit)))
+
+#summary(glm(data=baselinePursuit180, DTHMI180~ .+TX*SXTOTX, family = binomial(link=logit)))
+```
+
+b) Survival Analysis with cox PH model for DTHMI DAY
+  Results: Cox PH also shows that SXTOTX is not significant in Predicting DTHMIDAY ingeneral, before 30days or after 30 days, including when adjusting for baseline characteristics
+  
+death and death mi without controls: TX, time both not significant
+time almost significant for death mi
+```{r}
+baselineTemp<- select(PURSUIT, DTHMIDAY, HXPTCA, ENROLLMI, STDEP, USPT, CBLKPRH, DIGPRH,NTRIVPR,BBLKPR,HTN,HXDIAB,LIPIDS,FAMHX,PREVMI,HXCHF,HXCABG,HXRINSUF,PVD,HXPAIN,RACE,SMOKSTAT,PULSEB,AGE,WEIGHT,HEIGHT,SYSBP,DIABP,BMI,CREATCL, RALES, MALE,SOURCE,BASCKRAT,BASMBRAT, TX, SXTOTX)
+
+res.cox <- coxph(Surv(DTHMIDAY)~TX, data =baselineTemp)
+summary(res.cox)
+res.cox <- coxph(Surv(DTHMIDAY)~., data =baselineTemp)
+summary(res.cox)
+
+baselineb430 <- baselineTemp %>% filter(DTHMIDAY <=30)
+baselineb4180<- baselineTemp %>% filter(DTHMIDAY <=180)
+
+res.cox <- coxph(Surv(DTHMIDAY)~TX, data =baselineb430)
+summary(res.cox)
+res.cox <- coxph(Surv(DTHMIDAY)~., data =baselineb430)
+summary(res.cox)
+
+res.cox <- coxph(Surv(DTHMIDAY)~TX, data =baselineb4180)
+summary(res.cox)
+res.cox <- coxph(Surv(DTHMIDAY)~., data =baselineb4180)
+summary(res.cox)
+```
+
+death and death mi before and after 30 days without controls: 
+TX, time both not significant without controlling
+```{r}
+before30 <- PURSUIT %>% filter(DTHMI30==1)
+after30 <- PURSUIT %>% filter(DTHMI30==0)
+```
+before:no significance 
+```{r}
+res.cox <- coxph(Surv(DEATHDY)~TX, data =before30)
+res.cox
+summary(res.cox)
+
+res.cox <- coxph(Surv(DEATHDY) ~ TX + SXTOTX, data =before30)
+res.cox
+summary(res.cox)
+
+res.cox <- coxph(Surv(DTHMIDAY)~TX, data =before30)
+res.cox
+summary(res.cox)
+
+res.cox <- coxph(Surv(DTHMIDAY) ~ TX + SXTOTX, data =before30)
+res.cox
+summary(res.cox)
+```
+after:no significance
+```{r}
+res.cox <- coxph(Surv(DEATHDY)~TX, data =after30)
+res.cox
+summary(res.cox)
+
+res.cox <- coxph(Surv(DEATHDY) ~ TX + SXTOTX, data =after30)
+res.cox
+summary(res.cox)
+
+res.cox <- coxph(Surv(DTHMIDAY)~TX, data =after30)
+res.cox
+summary(res.cox)
+
+res.cox <- coxph(Surv(DTHMIDAY) ~ TX + SXTOTX, data =after30)
+res.cox
+summary(res.cox)
+```
+
+
+control for baseline variables:
+
+create baseline dfs
+```{r}
+baselinePursuitdth <- select(PURSUIT, DEATHDY, DTHMI30, HXPTCA, ENROLLMI, STDEP, USPT, CBLKPRH, DIGPRH,NTRIVPR,BBLKPR,HTN,HXDIAB,LIPIDS,FAMHX,PREVMI,HXCHF,HXCABG,HXRINSUF,PVD,HXPAIN,RACE,SMOKSTAT,PULSEB,AGE,WEIGHT,HEIGHT,SYSBP,DIABP,BMI,CREATCL, RALES, MALE,SOURCE,BASCKRAT,BASMBRAT, TX, SXTOTX)
+
+baselinePursuitdmi <- select(PURSUIT, DTHMIDAY, DTHMI30, HXPTCA, ENROLLMI, STDEP, USPT, CBLKPRH, DIGPRH,NTRIVPR,BBLKPR,HTN,HXDIAB,LIPIDS,FAMHX,PREVMI,HXCHF,HXCABG,HXRINSUF,PVD,HXPAIN,RACE,SMOKSTAT,PULSEB,AGE,WEIGHT,HEIGHT,SYSBP,DIABP,BMI,CREATCL, RALES, MALE,SOURCE,BASCKRAT,BASMBRAT, TX, SXTOTX)
+```
+death and death mi with controls: no significance
+```{r}
+res.cox <- coxph(Surv(DEATHDY)~., data =baselinePursuitdth)
+summary(res.cox)
+
+res.cox <- coxph(Surv(DTHMIDAY)~., data =baselinePursuitdmi)
+summary(res.cox)
+
+```
+
+death and death mi before and after 30 with controls:
+```{r}
+before30dth <- baselinePursuitdth %>% filter(DTHMI30==1)
+after30dth <- baselinePursuitdth %>% filter(DTHMI30==0)
+before30dmi <- baselinePursuitdmi %>% filter(DTHMI30==1)
+after30dmi <- baselinePursuitdmi %>% filter(DTHMI30==0)
+```
+time is almost significant for death before 30 days
+```{r}
+res.cox <- coxph(Surv(DEATHDY)~., data =before30dth)
+summary(res.cox)
+
+res.cox <- coxph(Surv(DEATHDY) ~., data =after30dth)
+summary(res.cox)
+
+res.cox <- coxph(Surv(DTHMIDAY)~., data =before30dmi)
+summary(res.cox)
+
+res.cox <- coxph(Surv(DTHMIDAY) ~ ., data =after30dmi)
+summary(res.cox)
+```
+
+
+c) Kaplin-Meyer exploration of DTHMI and DEATH days
+
+death mi
+```{r}
+surv_obj <- Surv(time=PURSUIT$DTHMIDAY)
+kmcurve <- survfit(surv_obj ~ PURSUIT$TX, data=PURSUIT)
+library(survminer)
+ggsurvplot(kmcurve, data=PURSUIT, pval=T) + 
+ 
+  ggtitle("Death or MI Survival Rates for Treatment vs. Placebo")
+
+```
+
+death
+```{r}
+surv_obj <- Surv(time=PURSUIT$DEATHDY)
+kmcurve <- survfit(surv_obj ~ PURSUIT$TX, data=PURSUIT)
+ggsurvplot(kmcurve, data=PURSUIT, pval=T) + 
+  ggtitle("Death Survival Rates for Treatment vs. Placebo")
+```
+
+death mi at 30 and 180: TX significant at the 30 day mark
+```{r}
+surv_obj <- Surv(time=PURSUIT$DTHMIDAY, event= PURSUIT$DTHMI180)
+kmcurve <- survfit(surv_obj ~ PURSUIT$TX, data=PURSUIT)
+ggsurvplot(kmcurve, data=PURSUIT, pval=T)
+
+surv_obj <- Surv(time=PURSUIT$DTHMIDAY, event= PURSUIT$DTHMI30)
+kmcurve <- survfit(surv_obj ~ PURSUIT$TX, data=PURSUIT)
+ggsurvplot(kmcurve, data=PURSUIT, pval=T)
+```
+death  at 30 and 180 days: no significance, TX is not significant in preventing death at all 
+```{r}
+surv_obj <- Surv(time=PURSUIT$DEATHDY, event= PURSUIT$DTHMI180)
+kmcurve <- survfit(surv_obj ~ PURSUIT$TX, data=PURSUIT)
+ggsurvplot(kmcurve, data=PURSUIT, pval=T)
+
+surv_obj <- Surv(time=PURSUIT$DEATHDY, event= PURSUIT$DTHMI30)
+kmcurve <- survfit(surv_obj ~ PURSUIT$TX, data=PURSUIT)
+ggsurvplot(kmcurve, data=PURSUIT, pval=T)
+```
+Results: TX is significant before 30 days but not at 180 days for DTHMIDAY
+        TX seems like it is only significant in preventing heart attacks, not death
+
+Explore difference between the death  and death mi groups 
+```{r}
+table(PURSUIT$DTHMI180)
+table(PURSUIT$DTHMI30)
+table(PURSUIT$DEATH180)
+#table(betterP$SurvDHTMIDAY)
+```
+
+Hypothesis: TX is only significant in preveting mi, not death
+Test with Logistic Regression:
+
+create new variable for whether or not DTHMIDY was a death or an mi
+```{r}
+#did they survive the dthmiday
+require(dplyr)
+table(PURSUIT$TX)
+betterP <- PURSUIT %>%
+  mutate(SurvDTHMIDAY=(DEATHDY > DTHMIDAY)) %>%
+mutate(SurvDTHMIDAY=as.numeric(SurvDTHMIDAY))
+betterP$SurvDTHMIDAY
+
+```
+only include the people who got integrilin
+```{r}
+head(betterP)
+table(betterP$TX)
+length(betterP$SurvDTHMIDAY )
+table(betterP$SurvDTHMIDAY)
+betterP30 <- betterP %>% filter(DTHMIDAY<=30)
+
+length(betterP30$SurvDTHMIDAY)
+table(betterP30$TX)
+table(betterP30$SurvDTHMIDAY)
+betterP30$SurvDTHMIDAY <- gsub("1", replacement="Survived", betterP30$SurvDTHMIDAY)
+betterP30$SurvDTHMIDAY <- gsub("0", replacement="Died", betterP30$SurvDTHMIDAY)
+betterP30$TX <- gsub("1", replacement="High", betterP30$TX)
+betterP30$TX <- gsub("0", replacement="Placebo", betterP30$TX)
+betterP30$SurvDTHMIDAY
+table(betterP30$SurvDTHMIDAY,as.factor(betterP30$TX))
+table(betterP30$SurvDTHMIDAY,as.factor(betterP30$INTERV72))
+
+#betterP <- betterP %>% (DEATH30 = ifelse(betterP$DEATHDY == 31, 0,1))
+
+#betterP <- betterP %>% (MIONLYDAY = ifelse(betterP$SurvDTHMIDAY==1,betterP$DTHMIDAY, NA))
+```
+
+
+create new data frames
+```{r}
+baselinePursuit30 <- select(betterP, DTHMI30, HXPTCA, ENROLLMI, STDEP, USPT, CBLKPRH, DIGPRH,NTRIVPR,BBLKPR,HTN,HXDIAB,LIPIDS,FAMHX,PREVMI,HXCHF,HXCABG,HXRINSUF,PVD,HXPAIN,RACE,SMOKSTAT,PULSEB,AGE,WEIGHT,HEIGHT,SYSBP,DIABP,BMI,CREATCL, RALES, MALE,SOURCE,BASCKRAT,BASMBRAT,SXTOTX, SurvDTHMIDAY, TX)
+
+#this removes nas
+#mi only before 30
+mionly30<- baselinePursuit30 %>% filter(SurvDTHMIDAY==1)
+
+#death before 30
+dthonly30<- baselinePursuit30 %>% filter(SurvDTHMIDAY==0)
+
+baselinePursuit180 <- select(betterP, DTHMI180, HXPTCA, ENROLLMI, STDEP, USPT, CBLKPRH, DIGPRH,NTRIVPR,BBLKPR,HTN,HXDIAB,LIPIDS,FAMHX,PREVMI,HXCHF,HXCABG,HXRINSUF,PVD,HXPAIN,RACE,SMOKSTAT,PULSEB,AGE,WEIGHT,HEIGHT,SYSBP,DIABP,BMI,CREATCL, RALES, MALE,SOURCE,BASCKRAT,BASMBRAT, SXTOTX, SurvDTHMIDAY,TX)
+
+#mi only before 180
+mionly180<- baselinePursuit180 %>% filter(SurvDTHMIDAY==1)
+
+#death before 180
+dthonly180<- baselinePursuit180 %>% filter(SurvDTHMIDAY==0)
+```
+
+logistic regression for 30 days: TX significance with controls, SXTOTX is not
+```{r}
+#30
+summary(glm(data=mionly30, DTHMI30 ~ TX, family = binomial(link=logit)))
+#ns
+summary(glm(data=mionly30, DTHMI30 ~ ., family = binomial(link=logit)))
+#0.1
+summary(glm(data=dthonly30, DTHMI30 ~ TX, family = binomial(link=logit)))
+#0.1
+summary(glm(data=dthonly30, DTHMI30 ~ ., family = binomial(link=logit)))
+#0.05
+
+#180
+summary(glm(data=dthonly180, DTHMI180 ~ TX, family = binomial(link=logit)))
+#ns
+summary(glm(data=dthonly180, DTHMI180 ~ ., family = binomial(link=logit)))
+#0.05
+summary(glm(data=dthonly180, DTHMI180 ~ TX, family = binomial(link=logit)))
+#ns
+summary(glm(data=dthonly180, DTHMI180 ~ ., family = binomial(link=logit)))
+#0.05
+```
+logistic regression for 25 days
+```{r}
+#only before 25 days
+pursuit25 <- PURSUIT%>%
+    mutate(DTHMI25 = ifelse (DTHMIDAY <= 24, 1, 0))
+```
+```{r}
+summary(glm(data=pursuit25, DTHMI25 ~ TX, family = binomial(link=logit)))
+
+baselineTemp <- select(pursuit25, DTHMI25, HXPTCA, ENROLLMI, STDEP, USPT, CBLKPRH, DIGPRH,NTRIVPR,BBLKPR,HTN,HXDIAB,LIPIDS,FAMHX,PREVMI,HXCHF,HXCABG,HXRINSUF,PVD,HXPAIN,RACE,SMOKSTAT,PULSEB,AGE,WEIGHT,HEIGHT,SYSBP,DIABP,BMI,CREATCL, RALES, MALE,SOURCE,BASCKRAT,BASMBRAT, SXTOTX,TX)
+
+summary(glm(data=baselineTemp, DTHMI25 ~ ., family = binomial(link=logit)))
+```
+
+Give up on this rabbit hole
+
+QUESTION 5:
+
+```{r}
+pursuit.timecluster <- betterP %>% 
+  mutate(SXTOTXcat = cut(PURSUIT$SXTOTX, breaks = c(0,0.05,8,16,24,200))) 
+
+require(survival)
+surv_object <- Surv(time = pursuit.timecluster$DTHMIDAY)
+KMcurve <- survfit(surv_object ~ SXTOTXcat, data = pursuit.timecluster)
+require(ggplot2)
+require(survminer)
+survplot0 <- ggsurvplot(KMcurve, data = pursuit.timecluster, pval = TRUE) +
+    ggtitle("Probability of Death or MI before and after 24 hour SXTOTX") 
+
+survplot0$title <- survplot0$plot +theme(plot.title = element_text(hjust = 0.5))
+survplot0$title
+
+# Does this work to show the effects at 30 days?
+surv_object <- Surv(time = pursuit.timecluster$DTHMIDAY, event = pursuit.timecluster$DTHMI30)
+
+KMcurve <- survfit(surv_object ~ SXTOTXcat, data = pursuit.timecluster)
+ggsurvplot(KMcurve, data = pursuit.timecluster, pval = TRUE, xlim = c(0,30), ylim = c(.5, 1))
+
+```
+
+baseline df
+```{r}
+baselinetemp <- select(pursuit.timecluster, DTHMIDAY, HXPTCA, ENROLLMI, STDEP, USPT, CBLKPRH, DIGPRH,NTRIVPR,BBLKPR,HTN,HXDIAB,LIPIDS,FAMHX,PREVMI,HXCHF,HXCABG,HXRINSUF,PVD,HXPAIN,RACE,SMOKSTAT,PULSEB,AGE,WEIGHT,HEIGHT,SYSBP,DIABP,BMI,CREATCL, RALES, MALE,SOURCE,BASCKRAT,BASMBRAT, SXTOTXcat, SurvDTHMIDAY, TX)
+```
+
+cox model for time to treatment cohorts
+```{r}
+res.cox <- coxph(Surv(DTHMIDAY)~SXTOTXcat, data = baselinetemp)
+summary(res.cox)
+res.cox <- coxph(Surv(DTHMIDAY)~., data = baselinetemp)
+summary(res.cox)
+```
+
+
+logistic regression for time to treatment cohorts
+```{r}
+baselinetemp <- select(pursuit.timecluster, DTHMI30, HXPTCA, ENROLLMI, STDEP, USPT, CBLKPRH, DIGPRH,NTRIVPR,BBLKPR,HTN,HXDIAB,LIPIDS,FAMHX,PREVMI,HXCHF,HXCABG,HXRINSUF,PVD,HXPAIN,RACE,SMOKSTAT,PULSEB,AGE,WEIGHT,HEIGHT,SYSBP,DIABP,BMI,CREATCL, RALES, MALE,SOURCE,BASCKRAT,BASMBRAT, SXTOTXcat, TX)
+```
+```{r}
+summary(glm(data=baselinetemp, DTHMI30 ~ SXTOTXcat, family = binomial(link=logit)))
+```
+
