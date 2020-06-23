@@ -1,5 +1,3 @@
-# Portfolio
-
 # Pursuit Study
 
 
@@ -17,4 +15,5 @@ example of my use of survival curves, cox proportional hazards, and Kaplan
 Mayer curves.
 
 Note: I am not able to include data due to HIPPA confidentiality of 
-medical data.
+medical data, so my code will not run. However, I included screen shots of 
+some of the graphs that I produced in this analysis. 
