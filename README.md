@@ -1,6 +1,5 @@
 # Pursuit Study
 
-
 This is from my summer internship with the Duke Clinical Research Institute 
 and North Carolina State University. I worked on this project with two other 
 students, but wrote the R code independently. Please note that this code is 
